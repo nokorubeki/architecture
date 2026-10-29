@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>建築クイズチャレンジ</title>
+<style>
+:root{--navy:#243447;--blue:#286b8e;--sand:#f5efe5;--ink:#202a33}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:linear-gradient(135deg,#e5edf1,#f7eee1);font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;color:var(--ink)}
+main{width:min(740px,100%);background:#fff;border-radius:22px;padding:clamp(22px,5vw,42px);box-shadow:0 18px 55px #24344720}
+.tag{display:inline-block;padding:6px 12px;border-radius:999px;background:#e1edf2;color:#24566d;font-size:.84rem;font-weight:800}
+h1{font-size:clamp(1.8rem,5vw,2.5rem);color:var(--navy);margin:14px 0 8px}
+p{line-height:1.75}.muted{color:#64748b}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}
+.stat{flex:1;min-width:110px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:13px;padding:10px 14px}
+.stat strong{display:block;font-size:1.25rem;color:var(--navy)}
+#question{font-size:1.2rem;font-weight:750;line-height:1.7;margin:24px 0 16px}
+.answers{display:grid;gap:10px}
+button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:13px 16px;transition:transform .12s}
+.answer{background:#f1f5f9;text-align:left;border:2px solid transparent;color:#172033}
+.answer:hover{background:#e1edf2;transform:translateY(-1px)}
+.answer.correct{background:#dcfce7;border-color:#22c55e}
+.answer.wrong{background:#fee2e2;border-color:#ef4444}
+#feedback{min-height:54px;margin:14px 0;font-weight:650;line-height:1.7}
+#next,.primary{background:var(--blue);color:white;font-weight:700}
+#next:disabled{opacity:.4;cursor:not-allowed}
+footer{margin-top:22px;font-size:.82rem;color:#64748b}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<main>
+  <span class="tag">🏛️ ARCHITECTURE MINI GAME</span>
+  <h1>建築クイズチャレンジ</h1>
+  <p>建物の構造やデザイン、建築史について全5問に挑戦！ 建築の知識を楽しくチェックしよう。</p>
+  <section class="stats">
+    <div class="stat">問題<strong id="progress">1 / 5</strong></div>
+    <div class="stat">スコア<strong id="score">0 点</strong></div>
+  </section>
+  <section id="game">
+    <div id="question"></div>
+    <div id="answers" class="answers"></div>
+    <div id="feedback" aria-live="polite"></div>
+    <button id="next" disabled>次の問題 →</button>
+  </section>
+  <section id="result" class="hidden">
+    <h2 id="resultTitle">結果発表！</h2>
+    <p id="resultText"></p>
+    <button class="primary" id="restart">もう一度プレイ</button>
+  </section>
+  <footer>授業用ミニゲーム｜HTML・CSS・JavaScriptで制作</footer>
+</main>
+<script>
+const quiz = [
+ {q:"建物の重さや地震などの力を地盤に伝える部分はどれ？",a:["屋根","基礎","内装","窓枠"],c:1,e:"基礎は建物を支え、建物にかかる力を地盤へ伝える重要な部分です。"},
+ {q:"コンクリートが固まるときに、主に起こる現象はどれ？",a:["水分が凍るだけ","金属になる","セメントと水の化学反応（水和反応）","砂が蒸発する"],c:2,e:"セメントと水が反応する水和反応によって、コンクリートは硬化します。"},
+ {q:"日本の伝統的な木造建築で、柱の上に置いて屋根の荷重を支える部材として代表的なのは？",a:["礎石だけ","障子","畳","梁（はり）"],c:3,e:"梁は柱と組み合わされ、床や屋根などからの荷重を支えて伝える部材です。"},
+ {q:"建築設計で「ユニバーサルデザイン」が目指すものは？",a:["できるだけ多くの人が使いやすい環境","見た目の装飾を増やすことだけ","建物を必ず高層にすること","材料費を必ずゼロにすること"],c:0,e:"年齢や身体的な特徴などにかかわらず、多くの人が利用しやすい設計を目指します。"},
+ {q:"建物の断熱性能を高める主な目的はどれ？",a:["窓を必ずなくす","室内外の熱の移動を抑え、快適性や省エネ性を高める","建物を重くする","雨水を飲料水に変える"],c:1,e:"断熱は熱の移動を抑え、冷暖房の効率や室内の快適性を高めるのに役立ちます。"}
+];
+let index=0, score=0, answered=false;
+const $=id=>document.getElementById(id);
+function render(){
+ answered=false;
+ $("progress").textContent=`${index+1} / ${quiz.length}`;
+ $("score").textContent=`${score} 点`;
+ $("question").textContent=`Q${index+1}. ${quiz[index].q}`;
+ $("feedback").textContent="";
+ $("next").disabled=true;
+ $("next").textContent=index===quiz.length-1?"結果を見る →":"次の問題 →";
+ $("answers").innerHTML="";
+ quiz[index].a.forEach((label,i)=>{
+   const b=document.createElement("button"); b.className="answer"; b.textContent=`${["A","B","C","D"][i]}. ${label}`;
+   b.addEventListener("click",()=>choose(i,b)); $("answers").appendChild(b);
+ });
+}
+function choose(choice,button){
+ if(answered)return; answered=true;
+ const q=quiz[index]; const buttons=[...$("answers").children];
+ buttons.forEach((b,i)=>{b.disabled=true;if(i===q.c)b.classList.add("correct")});
+ if(choice===q.c){score+=20;$("feedback").textContent="正解！ 🎉 "+q.e}
+ else {button.classList.add("wrong");$("feedback").textContent="おしい！ 正解は「"+q.a[q.c]+"」。"+q.e}
+ $("score").textContent=`${score} 点`; $("next").disabled=false;
+}
+$("next").addEventListener("click",()=>{
+ if(!answered)return;
+ if(index<quiz.length-1){index++;render()}
+ else{
+  $("game").classList.add("hidden");$("result").classList.remove("hidden");
+  $("resultTitle").textContent=score===100?"満点！すばらしい！":score>=60?"ナイスチャレンジ！":"挑戦ありがとう！";
+  $("resultText").textContent=`あなたのスコアは ${score} / 100 点！ ${score>=80?"建築の知識が身についているね。":"解説を振り返って、もう一度挑戦してみよう。"}`;
+ }
+});
+$("restart").addEventListener("click",()=>{index=0;score=0;$("game").classList.remove("hidden");$("result").classList.add("hidden");render()});
+render();
+</script>
+</body>
+</html>
